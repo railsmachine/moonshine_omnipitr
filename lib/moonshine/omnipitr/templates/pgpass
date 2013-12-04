@@ -1,0 +1,1 @@
+<%= database_environment[:host] %>:*:<%= database_environment[:database] %>:<%= database_environment[:username] %>:<%= database_environment[:password] %>

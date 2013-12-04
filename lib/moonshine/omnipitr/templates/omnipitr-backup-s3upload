@@ -1,0 +1,121 @@
+#!/usr/bin/env ruby
+
+require 'rubygems'
+require 'aws-sdk'
+
+prefix = "<%= options[:s3_prefix] %>"
+file_name = ARGV.first
+
+unless prefix.nil? or prefix.empty?
+  prefix = prefix + '/' unless prefix.end_with? '/'
+  file_name = prefix + file_name
+end
+
+bucket_name = "<%= options[:s3_bucket] %>"
+
+s3 = AWS::S3.new(
+  :access_key_id => "<%= options[:s3_key] %>",
+  :secret_access_key => "<%= options[:s3_secret] %>"
+)
+
+# create the bucket if it doesn't already exist
+unless s3.buckets[bucket_name].exists?
+  s3.buckets.create(bucket_name)
+end
+
+KB = 1024
+MB = 1024 * KB
+GB = 1024 * MB
+TB = 1024 * GB
+
+MAX_CHUNKS = 10_000
+MAX_FILE_SIZE = 5 *TB
+INITIAL_BUFFER_SIZE = 5 * MB
+
+BUFFER_GROWTH_FACTOR = 1.0006533241143831
+
+class Upload
+  # Upload.to(:s3object => s3object, :log_to => $stdout) do |out|
+  #   out.write("abc")
+  #   out.write("123")
+  # end
+  def self.to(args={})
+    stream = new(args)
+    begin
+      yield stream
+      stream.close
+    rescue => e
+      stream.cancel
+      raise
+    end
+    stream.size
+  end
+
+  attr_reader :size
+
+  def initialize(args={})
+    @s3object = args[:s3object] || raise("Missing :s3object")
+    @log = args[:log_to] # optional
+    reset
+    @upload = @s3object.multipart_upload
+  end
+
+  def write(data)
+    @buffer << data
+    flush if @chunk < MAX_CHUNKS && @buffer.size >= @buffer_size
+    @size += data.size
+  end
+
+  def close
+    flush if @buffer.size > 0
+    unless @upload.close.nil?
+      log "Done uploading #{size} bytes to #{location}."
+    end
+  end
+
+  def cancel
+    @upload.abort unless @upload.nil?
+    reset
+    log "Canceled upload to #{location}."
+  end
+
+  private
+
+  def location
+    "s3://#{@s3object.bucket.name}/#{@s3object.key}"
+  end
+
+  def reset
+    @buffer = ""
+    @buffer_size = INITIAL_BUFFER_SIZE
+    @size = 0
+    @chunk = 1
+    @upload = nil
+  end
+
+  def flush
+    log "Uploading part #{@chunk} (#{@buffer.size} bytes)."
+    @upload.add_part(@buffer)
+    @buffer_size = (@buffer_size * BUFFER_GROWTH_FACTOR).to_i
+    @buffer.clear
+    @chunk += 1
+    nil
+  end
+
+  def log(msg)
+    unless @log.nil?
+      @log.puts(msg)
+      @log.flush
+    end
+  end
+end
+
+object = s3.buckets[bucket_name].objects[file_name]
+Upload.to(:s3object => object, :log_to => $stdout) do |out|
+  buffer = ""
+  until $stdin.eof?
+    $stdin.readpartial(4096, buffer)
+    out.write(buffer)
+  end
+end
+
