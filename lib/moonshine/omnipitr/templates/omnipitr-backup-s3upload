@@ -57,7 +57,7 @@ class Upload
     @s3object = args[:s3object] || raise("Missing :s3object")
     @log = args[:log_to] # optional
     reset
-    @upload = @s3object.multipart_upload
+    @upload = @s3object.multipart_upload(:server_side_encryption => :aes256)
   end
 
   def write(data)
@@ -114,7 +114,7 @@ object = s3.buckets[bucket_name].objects[file_name]
 Upload.to(:s3object => object, :log_to => $stdout) do |out|
   buffer = ""
   until $stdin.eof?
-    $stdin.readpartial(4096, buffer)
+    $stdin.readpartial(<%= options[:read_buffer_size] || 4096 %>, buffer)
     out.write(buffer)
   end
 end

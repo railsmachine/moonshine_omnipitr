@@ -6,6 +6,7 @@ module Moonshine
 
     def omnipitr(options = {})
       omnipitr_version = options[:version] || '1.2.0'
+      options[:read_buffer_size] ||= 4096
 
       package 'wget', :ensure => :installed
       exec 'download omnipitr tarball',
