@@ -73,3 +73,7 @@ These are namespaced under `:omnipitr`. They can be configured a few ways:
       :s3_key    => 'YOUR_ACCESS_KEY',
       :s3_secret => 'YOUR_SECRET_KEY'
     }
+    
+***
+
+Unless otherwise specified, all content copyright &copy; 2014, [Rails Machine, LLC](http://railsmachine.com)
