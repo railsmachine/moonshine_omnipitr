@@ -23,7 +23,7 @@ module Moonshine
         end
 
       exec 'install omnipitr',
-        :command => "tar xzvf /usr/local/src/omnipitr-#{omnipitr_version}.tar.gz &&  mkdir -p /opt/OmniPITR && cp -R /tmp/omnipitr-1.2.0/* /opt/OmniPITR/ && rm -fr /tmp/omnipitr-1.2.0",
+        :command => "tar xzvf /usr/local/src/omnipitr-#{omnipitr_version}.tar.gz &&  mkdir -p /opt/OmniPITR && cp -R /tmp/omnipitr-#{omnipitr_version}/* /opt/OmniPITR/ && rm -fr /tmp/omnipitr-#{omnipitr_version}",
         :cwd => '/tmp',
         :unless => "grep version /opt/OmniPITR/META.json | grep #{omnipitr_version}",
         :require => exec('download omnipitr tarball')
